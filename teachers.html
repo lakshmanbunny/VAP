@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mark Attendance</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <style>
+        /* Include your CSS styles here */
+        /* (Refer to your existing CSS, modified as needed) */
+    </style>
+    <script>
+        let currentPeriod = 1;
+
+        function disablePastDates() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('date').setAttribute('min', today);
+        }
+
+        async function loadStudents(section) {
+            const response = await fetch(`/get_students?section=${section}`);
+            const students = await response.json();
+            const tableBody = document.getElementById('students-table-body');
+            tableBody.innerHTML = '';
+            students.forEach(student => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${student.student_id}</td>
+                    <td>${student.name}</td>
+                    <td><input type="checkbox" data-student-id="${student.student_id}" data-student-name="${student.name}"></td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        async function submitAttendance() {
+            const date = document.getElementById('date').value;
+            const section = document.getElementById('section').value;
+            const period = currentPeriod;
+            const subject = document.getElementById('subject').value;
+            const attendanceRecords = [];
+
+            const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(checkbox => {
+                const record = {
+                    student_id: checkbox.dataset.studentId,
+                    status: checkbox.checked ? 'present' : 'absent'
+                };
+                attendanceRecords.push(record);
+            });
+
+            const response = await fetch('/submit', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    date: date,
+                    section: section,
+                    period: period,
+                    subject: subject,
+                    attendance_records: attendanceRecords
+                })
+            });
+            const result = await response.json();
+            alert(result.message);
+
+            currentPeriod += 1;
+            if (currentPeriod > 7) {
+                currentPeriod = 1;
+            }
+            document.getElementById('current-period').innerText = `Current Period: ${currentPeriod}`;
+            document.getElementById('subject').value = '';
+            checkboxes.forEach(checkbox => checkbox.checked = false);
+        }
+
+        window.onload = disablePastDates;
+    </script>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="mb-4">Mark Attendance</h1>
+        <form onsubmit="event.preventDefault(); submitAttendance();">
+            <label for="section">Section:</label>
+            <select id="section" name="section" onchange="loadStudents(this.value)" required>
+                <option value="">Select Section</option>
+                <option value="A">A</option>
+                <option value="B">B</option>
+                <option value="C">C</option>
+            </select><br><br>
+
+            <label for="date">Date:</label>
+            <input type="date" id="date" name="date" required><br><br>
+
+            <div>
+                <label id="current-period">Current Period: 1</label><br><br>
+                <label for="subject">Subject:</label>
+                <select id="subject" name="subject" required>
+                    <option value="">Select Subject</option>
+                    <option value="java">Java</option>
+                    <option value="iai">IAI</option>
+                    <option value="dbms">DBMS</option>
+                    <option value="atcd">ATCD</option>
+                    <option value="dm">DM</option>
+                </select><br><br>
+            </div>
+
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Student ID</th>
+                        <th>Name</th>
+                        <th>Attendance</th>
+                    </tr>
+                </thead>
+                <tbody id="students-table-body">
+                    <!-- Students will be loaded here -->
+                </tbody>
+            </table><br><br>
+
+            <button type="submit">Submit Attendance</button>
+        </form>
+    </div>
+</body>
+</html>

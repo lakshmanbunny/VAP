@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Management System</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <!-- <link rel="stylesheet" href="index.css"> -->
+    <style>
+        /* General styling */
+body{
+    background-color: #333;
+}
+
+/* Header styling */
+h1, h2 {
+    text-align: center;
+    color: #000000;
+    font-size: 45px;
+}
+
+/* Forms styling */
+form {
+    margin-bottom: 20px;
+}
+
+label {
+    font-weight: bold;
+    font-size: 20px;
+    color: black;
+}
+
+input[type="date"],
+select {
+    padding: 8px;
+    margin-bottom: 10px;
+}
+button {
+    padding: 10px 20px;
+    background-color: #080001;
+    color: #fff;
+    font-size: large;
+    border: 1px ;
+    border-radius: 20px;
+    cursor: pointer;
+}
+
+button[type="submit"] {
+    padding: 10px 20px;
+    background-color: #ff0019;
+    color: #fff;
+    font-size: large;
+    border: 1px ;
+    border-radius: 20px;
+    cursor: pointer;
+}
+button:hover {
+    background-color: #646464;
+}
+
+button[type="submit"]:hover {
+    background-color: #000000;
+}
+
+/* Tables styling */
+.table {
+    width: 100%;
+    background-color: white;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    color: white;
+    font-size: 26px;
+}
+
+.table th, .table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+    color: #000000;
+}
+
+.table th {
+    background-color: #000000;
+    color: #fff;
+}
+
+
+/* Message styling */
+.message {
+    text-align: center;
+    font-style: italic;
+    display: none;
+}
+
+.message.success {
+    color: #28a745;
+}
+
+.message.error {
+    color: #dc3545;
+}
+
+/* Colors for dynamic elements */
+.absent {
+    color: #dc3545;
+}
+
+.present {
+    color: #28a745;
+} 
+.marking{
+    height: 100px;
+    overflow: hidden;
+    width: auto;
+    align-items: center;
+    background-color: #444;
+    color: #fff;
+    /* padding-left: 50px;
+    padding-top: 50px;
+    padding-bottom: 50px;
+    padding-right: 50px; */
+    border-radius:20px;
+    margin: 30px 30px 30px 30px;
+}
+.marking:hover{
+    height: auto;
+    padding: 100px 100px 100px 100px ;
+    transition: 3s;
+}
+.am{
+    background-color: #000000;
+    padding: 50px;
+    margin: 30px 30px 30px 30px;
+    border-radius: 50px;
+    font-size: 75px;
+}
+.hidden{
+    height: 100px;
+    background-color: rgb(255, 255, 255);
+    overflow: hidden;
+    border-radius: 20px;
+    margin: 20px 20px 20px 20px ;
+
+}
+.hidden:hover{
+    height: auto;
+    padding: 50px 50px 50px 50px ;
+    transition: 1s;
+    
+}
+
+    </style>
+    <script>
+        let currentPeriod = 1;
+
+        function disablePastDates() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('date').setAttribute('min', today);
+        }
+
+        async function loadStudents(section) {
+            const response = await fetch(`/get_students?section=${section}`);
+            const students = await response.json();
+            const tableBody = document.getElementById('students-table-body');
+            tableBody.innerHTML = '';
+            students.forEach(student => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${student.student_id}</td>
+                    <td>${student.name}</td>
+                    <td><input type="checkbox" data-student-id="${student.student_id}" data-student-name="${student.name}"></td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        async function submitAttendance() {
+    const date = document.getElementById('date').value;
+    const section = document.getElementById('section').value;
+    const period = document.getElementById('period').value; // Fetch the selected period
+    const subject = document.getElementById('subject').value;
+    const attendanceRecords = [];
+
+    const checkboxes = document.querySelectorAll(`input[type="checkbox"]`);
+    checkboxes.forEach(checkbox => {
+        const record = {
+            student_id: checkbox.dataset.studentId,
+            status: checkbox.checked ? 'present' : 'absent'
+        };
+        attendanceRecords.push(record);
+    });
+
+    const response = await fetch('/submit', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            date: date,
+            section: section,
+            period: period,
+            subject: subject,
+            attendance_records: attendanceRecords
+        })
+    });
+    const result = await response.json();
+    alert(result.message);
+
+    // Clear the form after submission
+    document.getElementById('subject').value = '';
+    checkboxes.forEach(checkbox => checkbox.checked = false);
+    document.getElementById('period').value = '1'; // Reset to default period
+}
+async function calculateAttendance() {
+    const section = document.getElementById('section-calculate').value;
+    const subject = document.getElementById('subject-calculate').value;
+
+    const response = await fetch(`/calculate_attendance?section=${section}&subject=${subject}`);
+    const attendancePercentages = await response.json();
+    const resultsDiv = document.getElementById('attendance-results');
+    resultsDiv.innerHTML = '<h3>Attendance Percentages</h3>';
+
+    if (attendancePercentages && Array.isArray(attendancePercentages) && attendancePercentages.length > 0) {
+        const table = document.createElement('table');
+        table.className = 'table'; // Add table class for consistent styling
+
+        const header = table.createTHead().insertRow(0);
+        header.insertCell(0).innerText = 'Student ID';
+        header.insertCell(1).innerText = 'Attendance Percentage';
+
+        const tbody = table.createTBody();
+        attendancePercentages.forEach(record => {
+            const row = tbody.insertRow();
+            row.insertCell(0).innerText = record.student_id;
+            row.insertCell(1).innerText = record.attendance_percentage.toFixed(2) + '%';
+        });
+
+        resultsDiv.appendChild(table);
+    } else {
+        resultsDiv.innerHTML = '<p>No data available.</p>';
+    }
+}
+
+
+    async function calculateOverallAttendance() {
+    const section = document.getElementById('section-overall').value;
+    const startDate = document.getElementById('start-date').value;
+    const endDate = document.getElementById('end-date').value;
+
+    const response = await fetch(`/calculate_overall_attendance?section=${section}&start_date=${startDate}&end_date=${endDate}`);
+    const result = await response.json();
+    console.log(result); // Log the result for debugging
+
+    const resultsDiv = document.getElementById('overall-attendance-results');
+    resultsDiv.innerHTML = '<h3>Overall Attendance Percentages</h3>';
+
+    if (result.overall_attendance && Array.isArray(result.overall_attendance)) {
+        const table = document.createElement('table');
+        table.className = 'table'; // Add table class for consistent styling
+
+        const header = table.createTHead().insertRow(0);
+        header.insertCell(0).innerText = 'Student ID';
+        header.insertCell(1).innerText = 'Name';
+        header.insertCell(2).innerText = 'Total Periods';
+        header.insertCell(3).innerText = 'Attended Periods';
+        header.insertCell(4).innerText = 'Attendance Percentage';
+
+        const tbody = table.createTBody();
+        result.overall_attendance.forEach(record => {
+            const row = tbody.insertRow();
+            row.insertCell(0).innerText = record.student_id;
+            row.insertCell(1).innerText = record.name;
+            row.insertCell(2).innerText = record.total_periods;
+            row.insertCell(3).innerText = record.attended_periods;
+            row.insertCell(4).innerText = record.attendance_percentage.toFixed(2);
+        });
+
+        resultsDiv.appendChild(table);
+        resultsDiv.insertAdjacentHTML('beforeend', `<p>Average Attendance Percentage: ${result.average_percentage.toFixed(2)}%</p>`);
+    } else {
+        resultsDiv.innerHTML = '<p>No data available.</p>';
+    }
+}
+
+
+        window.onload = disablePastDates;
+
+        async function fetchAbsentees() {
+            const date = document.getElementById('absentees-date').value;
+            const section = document.getElementById('absentees-section').value;
+
+            const response = await fetch(`/get_absentees_info?date=${date}&section=${section}`);
+            const data = await response.json();
+
+            const tableBody = document.getElementById('absentees-table-body');
+            tableBody.innerHTML = '';
+
+            if (response.status === 200) {
+                document.getElementById('absentees-message').style.display = 'none';
+                const headerRow = document.getElementById('absentees-table-head');
+                headerRow.innerHTML = '<th>Subject</th>';
+
+                for (const subject in data) {
+                    headerRow.innerHTML += `<th>${subject}</th>`;
+                }
+
+                const rollNumbers = [];
+                for (const subject in data) {
+                    data[subject].forEach(roll => {
+                        if (!rollNumbers.includes(roll)) {
+                            rollNumbers.push(roll);
+                        }
+                    });
+                }
+
+                rollNumbers.forEach(roll => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `<td>${roll}</td>`;
+                    for (const subject in data) {
+                        row.innerHTML += `<td>${data[subject].includes(roll) ? 'X' : ''}</td>`;
+                    }
+                    tableBody.appendChild(row);
+                });
+            } else {
+                document.getElementById('absentees-message').style.display = 'block';
+            }
+        }
+
+        async function fetchBunkers() {
+            const date = document.getElementById('bunkers-date').value;
+            const section = document.getElementById('bunkers-section').value;
+
+            const response = await fetch(`/get_bunkers_info?date=${date}&section=${section}`);
+            const data = await response.json();
+
+            const tableBody = document.getElementById('bunkers-table-body');
+            tableBody.innerHTML = '';
+
+            if (response.status === 200) {
+                document.getElementById('bunkers-message').style.display = 'none';
+                const headerRow = document.getElementById('bunkers-table-head');
+                headerRow.innerHTML = '<th>Subject</th>';
+
+                for (const subject in data) {
+                    headerRow.innerHTML += `<th>${subject}</th>`;
+                }
+
+                const rollNumbers = [];
+                for (const subject in data) {
+                    data[subject].forEach(roll => {
+                        if (!rollNumbers.includes(roll)) {
+                            rollNumbers.push(roll);
+                        }
+                    });
+                }
+
+                rollNumbers.forEach(roll => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `<td>${roll}</td>`;
+                    for (const subject in data) {
+                        row.innerHTML += `<td>${data[subject].includes(roll) ? 'X' : ''}</td>`;
+                    }
+                    tableBody.appendChild(row);
+                });
+            } else {
+                document.getElementById('bunkers-message').style.display = 'block';
+            }
+        }
+
+        function downloadAbsenteesCSV() {
+            const date = document.getElementById('absentees-date').value;
+            const section = document.getElementById('absentees-section').value;
+            window.location.href = `/download_absentees_csv?date=${date}&section=${section}`;
+        }
+
+        function downloadBunkersCSV() {
+            const date = document.getElementById('bunkers-date').value;
+            const section = document.getElementById('bunkers-section').value;
+            window.location.href = `/download_bunkers_csv?date=${date}&section=${section}`;
+        }
+    </script>
+</head>
+<body>
+    <!-- <h1 class="am" style="color: yellow"> ATTENDANCE MATTERS!!</h1> -->
+    
+    <div class="marking ">
+        <!-- <h1 class="mb-4" style="color: white;">Attendance Management System</h1> -->
+        <br><h1 style="color: white;" font-weight: bold; font-size: 75px;>MARK ATTENDANCE</h1><br>
+        <form onsubmit="event.preventDefault(); submitAttendance();">
+            <label for="year" style="color: white; ">Year:</label>
+            <input type="text" id="year" name="year" value="2" readonly><br><br>
+
+            <label for="section" style="color: white;">Section:</label>
+            <select id="section" name="section" onchange="loadStudents(this.value)" required>
+                <option value="">Select Section</option>
+                <option value="A">A</option>
+                <option value="B">B</option>
+                <option value="C">C</option>
+            </select><br><br>
+
+            <label for="date" style="color: white;">Date:</label>
+            <input type="date" id="date" name="date" required><br><br>
+
+            <div>
+                <!-- <label id="current-period">Current Period: 1</label><br><br> -->
+                <div>
+                    <label for="period" style="color: white;">Period:</label>
+                    <select id="period" name="period" required>
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                        <option value="6">6</option>
+                        <option value="7">7</option>
+                    </select>
+                </div>
+                
+                <label for="subject" style="color: white;">Subject:</label>
+                <select id="subject" name="subject" required>
+                    <option value="">Select Subject</option>
+                    <option value="java">Java</option>
+                    <option value="iai">IAI</option>
+                    <option value="dbms">DBMS</option>
+                    <option value="atcd">ATCD</option>
+                    <option value="dm">DM</option>
+                </select><br><br>
+            </div>
+
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Student ID</th>
+                        <th>Name</th>
+                        <th>Attendance</th>
+                    </tr>
+                </thead>
+                <tbody id="students-table-body">
+                    <!-- Students will be loaded here -->
+                </tbody>
+            </table><br><br>
+
+            <button type="submit">Submit Attendance</button>
+        </form>
+        </div>
+    <div class="container mt-5">
+        
+        
+        
+        <div class="hidden">
+            <br><h2>Calculate Attendance Percentage</h2><br>
+            <form onsubmit="event.preventDefault(); calculateAttendance();">
+                <label for="section-calculate">Section:</label>
+                <select id="section-calculate" name="section-calculate" required>
+                    <option value="">Select Section</option>
+                    <option value="A">A</option>
+                    <option value="B">B</option>
+                    <option value="C">C</option>
+                </select><br><br>
+    
+                <label for="subject-calculate">Subject:</label>
+                <select id="subject-calculate" name="subject-calculate" required>
+                    <option value="">Select Subject</option>
+                    <option value="java">Java</option>
+                    <option value="iai">IAI</option>
+                    <option value="dbms">DBMS</option>
+                    <option value="atcd">ATCD</option>
+                    <option value="dm">DM</option>
+                </select><br><br>
+    
+                <button type="submit">Calculate Attendance</button>
+            </form>
+    
+            <div id="attendance-results"></div>
+            <button onclick="downloadSubjectCSV()">Download Attendance CSV</button><br>
+        </div>
+    
+        
+        <div class="hidden"><br><h2>Calculate Overall Attendance Percentage</h2><br>
+            <form onsubmit="event.preventDefault(); calculateOverallAttendance();">
+                <label for="section-overall">Section:</label>
+                <select id="section-overall" name="section-overall" required>
+                    <option value="">Select Section</option>
+                    <option value="A">A</option>
+                    <option value="B">B</option>
+                    <option value="C">C</option>
+                </select><br><br>
+        
+                <label for="start-date">Start Date:</label>
+                <input type="date" id="start-date" name="start-date" required><br><br>
+        
+                <label for="end-date">End Date:</label>
+                <input type="date" id="end-date" name="end-date" required><br><br>
+        
+                <button type="submit">Calculate Overall Attendance</button>
+            </form>
+        
+            <div id="overall-attendance-results"></div>
+        
+            <button onclick="downloadCSV()">Download Overall Attendance CSV</button>
+             <br><br></div>
+    <div class="hidden"><br><h2>Get Absentees Information</h2><br>
+        <form onsubmit="event.preventDefault(); fetchAbsentees();">
+            <label for="absentees-section">Section:</label>
+            <select id="absentees-section" name="absentees-section" required>
+                <option value="">Select Section</option>
+                <option value="A">A</option>
+                <option value="B">B</option>
+                <option value="C">C</option>
+            </select><br><br>
+
+            <label for="absentees-date">Date:</label>
+            <input type="date" id="absentees-date" name="absentees-date" required><br><br>
+
+            <button type="submit">Fetch Absentees</button>
+        </form>
+        <div id="absentees-results"></div><br>
+        <div class="mb-4">
+            <!-- <h2>Absentees</h2> -->
+            <div>
+                <!-- <label for="absentees-date">Date:</label> -->
+                <!-- <input type="date" id="absentees-date"> -->
+                <!-- <label for="absentees-section">Section:</label> -->
+                <!-- <input type="text" id="absentees-section"> -->
+                <!-- <button onclick="fetchAbsentees()">Get Absentees</button> -->
+                <button onclick="downloadAbsenteesCSV()">Download CSV</button>
+            </div>
+            <p id="absentees-message" style="display: none;">No absentees found</p>
+            <table class="table">
+                <thead>
+                    <tr id="absentees-table-head"></tr>
+                </thead>
+                <tbody id="absentees-table-body"></tbody>
+            </table>
+        </div>
+    </div>   
+    
+
+    <div class="hidden"><br><h2>Get Bunkers Information</h2><br>
+        <form onsubmit="event.preventDefault(); fetchBunkers();">
+            <label for="bunkers-section">Section:</label>
+            <select id="bunkers-section" name="bunkers-section" required>
+                <option value="">Select Section</option>
+                <option value="A">A</option>
+                <option value="B">B</option>
+                <option value="C">C</option>
+            </select><br><br>
+
+            <label for="bunkers-date">Date:</label>
+            <input type="date" id="bunkers-date" name="bunkers-date" required><br><br>
+
+            <button type="submit">Fetch Bunkers</button>
+        </form>
+        <div id="bunkers-results"></div><br>
+        <div class="mb-4">
+            <!-- <h2>Bunkers</h2> -->
+            <div>
+                <!-- <label for="bunkers-date">Date:</label> -->
+                <!-- <input type="date" id="bunkers-date"> -->
+                <!-- <label for="bunkers-section">Section:</label> -->
+                <!-- <input type="text" id="bunkers-section"> -->
+                <!-- <button onclick="fetchBunkers()">Get Bunkers</button> -->
+                <button onclick="downloadBunkersCSV()">Download CSV</button>
+            </div>
+            <p id="bunkers-message" style="display: none;">No bunkers found</p>
+            <table class="table">
+                <thead>
+                    <tr id="bunkers-table-head"></tr>
+                </thead>
+                <tbody id="bunkers-table-body"></tbody>
+            </table>
+        </div></div>
+        <!-- Form to fetch bunkers -->
+        
+    
+    </div>
+</body>
+</html>

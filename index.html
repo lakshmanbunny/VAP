@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VIGNAN ATTENDANCE PORTAL</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <style>
+        body { 
+            background: url('https://cdn.dribbble.com/users/1244169/screenshots/4494753/attendance_final.gif') no-repeat center center;
+            background-size: 90% ;
+            background-color: #333; 
+            color: #fff; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            margin: 0;
+        }
+        .container {
+    background: rgba(0, 0, 0, 0.5); /* Semi-transparent black background */
+    border-radius: 50px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    padding: 20px;
+    width: 400px;
+    max-width: 100%;
+    text-align: center;
+    color: #fff; /* Set text color to white for better contrast */
+}
+
+        .card {
+            background: transparent;
+            border: none;
+            border-radius: 50px;
+            padding: 15px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s;
+        }
+        .card:hover {
+            transform: scale(1.05);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .btn {
+            width: 100%;
+            border-radius: 50px;
+            font-size: 25px;
+            /* margin: 10px 10px 10px 10px; */
+            border-radius: 10px;
+            margin-right: 20px;
+            margin-top: 20px;
+        }
+        .btn-primary {
+            background: #007bff;
+            border: none;
+        }
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+        .toggle-buttons {
+            margin-bottom: 20px;
+        }
+        .toggle-buttons button {
+            border: none;
+            background: #555;
+            border-radius: 50px;
+            margin: 0 5px;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-weight: bold;
+            color: #fff;
+        }
+        .toggle-buttons .active {
+            background: #007bff;
+        }
+        .toggle-buttons .inactive {
+            background: #555;
+        }
+        .heading {
+            margin-bottom: 20px;
+        }
+        .heading h2 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: #007bff;
+        }
+        .logo {
+            margin-bottom: 20px;
+            width: 350px; /* Adjust the size of the logo */
+            height: auto;
+            border-radius: 50px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- <img src="https://via.placeholder.com/150" alt="College Logo" class="logo"> -->
+        <img src="https://th.bing.com/th/id/OIP.yWeutQkrZCUyGOp75EfvBwAAAA?rs=1&pid=ImgDetMain" alt="College Logo" class="logo">
+        <div class="heading">
+            <h2 style="color: white; font-size: 30px; font-weight: 700;">VIGNAN ATTENDANCE PORTAL</h2>
+        </div>
+        <div class="toggle-buttons">
+            <button id="login-btn" class="active">Login</button>
+            <button id="register-btn" class="inactive">Register</button>
+        </div>
+        <div id="form-container">
+            <!-- Login Form -->
+            <div id="login-form" class="card">
+                <form>
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input type="text" class="form-control" id="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" class="form-control" id="password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Login</button>
+                </form>
+            </div>
+            <!-- Register Form -->
+            <div id="register-form" class="card" style="display: none;">
+                <form>
+                    <div class="form-group">
+                        <label for="register-username">Username</label>
+                        <input type="text" class="form-control" id="register-username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="register-password">Password</label>
+                        <input type="password" class="form-control" id="register-password" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="register-mobile">Mobile</label>
+                        <input type="text" class="form-control" id="register-mobile" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Register</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('#login-btn').click(function() {
+                $('#login-form').show();
+                $('#register-form').hide();
+                $(this).addClass('active').removeClass('inactive');
+                $('#register-btn').addClass('inactive').removeClass('active');
+            });
+
+            $('#register-btn').click(function() {
+                $('#login-form').hide();
+                $('#register-form').show();
+                $(this).addClass('active').removeClass('inactive');
+                $('#login-btn').addClass('inactive').removeClass('active');
+            });
+
+            $('#login-form form').on('submit', function(event) {
+                event.preventDefault();
+                const username = $('#username').val();
+                const password = $('#password').val();
+
+                $.ajax({
+                    url: '/login',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ username, password }),
+                    success: function(response) {
+                        if (response.success) {
+                            if (response.userType === 'admin') {
+                                window.location.href = '/admin_dashboard.html';
+                            } else if (response.redirect) {
+                                window.location.href = response.redirect;
+                            }
+                        } else {
+                            alert('Invalid username or password');
+                        }
+                    }
+                });
+            });
+
+            $('#register-form form').on('submit', function(event) {
+                event.preventDefault();
+                const username = $('#register-username').val();
+                const password = $('#register-password').val();
+                const mobile = $('#register-mobile').val();
+                const userType = 'teacher'; // Default userType to 'teacher'
+                
+                $.ajax({
+                    url: '/register',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ username, password, mobile, userType }),
+                    success: function(response) {
+                        if (response.success) {
+                            alert('Registration successful! You can now log in.');
+                        } else {
+                            alert('Registration failed: ' + response.message);
+                        }
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
